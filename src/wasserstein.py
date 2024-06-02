@@ -130,3 +130,54 @@ def wass_bary_3d(
             v[i] = v[i] * (bary / d[i])
 
     return bary
+
+
+def wass_bary_mesh(
+    mus: List[np.ndarray],
+    coef: List[Union[int, float]],
+    a: np.ndarray,
+    n: int,
+    L=None,
+    prefactorized=True,
+    conv=False,
+    iterations=100,
+    gamma=0.01,
+    entropic_sharpening=True,
+):
+    k = len(mus)
+
+    v = np.ones((k, n))
+    w = np.ones((k, n))
+    d = np.zeros((k, n))
+    eps = 1e-20
+
+    # add small epsilon to the distributions
+    for i in range(k):
+        mus[i] += eps
+
+    if not prefactorized and not conv:
+        L_inv = np.linalg.inv(L)
+    for j in range(iter):
+        bary = np.ones(n)
+        for i in range(k):
+            if not conv:
+                if prefactorized:
+                    w[i] = mus[i] / slin.solve_triangular(
+                        L.T, slin.solve_triangular(L, a * v[i], lower=True)
+                    )
+                    d[i] = v[i] * slin.solve_triangular(
+                        L.T, slin.solve_triangular(L, a * w[i], lower=True)
+                    )
+
+                else:
+                    w[i] = mus[i] / (L_inv @ (a * v[i]))
+                    d[i] = v[i] * (L_inv @ (a * w[i]))
+
+            bary = bary * (d[i] ** coef[i])
+        if entropic_sharpening:
+            bary = entropic_sharpening_func(
+                bary, max(calculate_entropy(u, np.array(a)) for u in mus), np.array(a)
+            )
+        for i in range(k):
+            v[i] = v[i] * (bary / (d[i]))
+    return bary

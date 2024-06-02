@@ -70,66 +70,6 @@ def naive_2d_convolution(
     return expected_result.flatten()
 
 
-def convolution3D(E, u):
-    n = len(E)
-    u = u.reshape(n, n, n)
-    E2 = np.zeros(2 * n - 1)
-    E2[:n] = np.flip(E)
-    E2[n - 1 :] = E
-    E = E2
-
-    conv_lignes = []
-    for depth in range(n):
-        temp = []
-        for line in range(n):
-            temp += [np.convolve(u[depth, line, :], E).tolist()]
-        conv_lignes += [temp]
-    conv_lignes = np.array(conv_lignes)[:, :, n - 1 : 2 * n - 1]
-    conv_columns = []
-    for depth in range(n):
-        temp = []
-        for column in range(n):
-            temp += [np.convolve(conv_lignes[depth, :, column], E).tolist()]
-        conv_columns += [temp]
-    conv_columns = np.array(conv_columns)[:, :, n - 1 : 2 * n - 1]
-    for depth in range(n):
-        conv_columns[depth, :, :] = conv_columns[depth, :, :].T
-
-    conv_depth = []
-    for line in range(n):
-        temp = []
-        for column in range(n):
-            temp += [np.convolve(conv_columns[:, line, column], E).tolist()]
-        conv_depth += [temp]
-    conv_depth = np.transpose(np.array(conv_depth)[:, :, n - 1 : 2 * n - 1], (2, 0, 1))
-
-    return conv_depth.flatten()
-
-
-def classical3D(E, u, gamma):
-    n = len(E)
-    v = u.reshape(n, n, n)
-
-    expected_result = np.zeros((n, n, n))
-    for d in range(n):
-        for l in range(n):
-            for c in range(n):
-                expected_result[d, l, c] = sum(
-                    np.exp(-(((d - r) / n) ** 2) / (gamma / 2))
-                    * sum(
-                        np.exp(-(((l - a) / n) ** 2) / (gamma / 2))
-                        * sum(
-                            np.exp(-(((c - b) / n) ** 2) / (gamma / 2)) * v[r, a, b]
-                            for b in range(n)
-                        )
-                        for a in range(n)
-                    )
-                    for r in range(n)
-                )
-
-    return expected_result
-
-
 def convolution3D(kernel: np.ndarray, u: np.ndarray) -> np.ndarray:
     """
     Perform a 3D convolution of a kernel with an input array.
@@ -193,15 +133,16 @@ def classical3D(kernel: np.ndarray, u: np.ndarray, gamma: float) -> np.ndarray:
     v = u.reshape(n, n, n)
 
     expected_result = np.zeros((n, n, n))
-    for d in range(n):
-        for l in range(n):
-            for c in range(n):
-                expected_result[d, l, c] = sum(
-                    np.exp(-(((d - r) / n) ** 2) / (gamma / 2))
+    for depth in range(n):
+        for row in range(n):
+            for column in range(n):
+                expected_result[depth, row, column] = sum(
+                    np.exp(-(((depth - r) / n) ** 2) / (gamma / 2))
                     * sum(
-                        np.exp(-(((l - a) / n) ** 2) / (gamma / 2))
+                        np.exp(-(((row - a) / n) ** 2) / (gamma / 2))
                         * sum(
-                            np.exp(-(((c - b) / n) ** 2) / (gamma / 2)) * v[r, a, b]
+                            np.exp(-(((column - b) / n) ** 2) / (gamma / 2))
+                            * v[r, a, b]
                             for b in range(n)
                         )
                         for a in range(n)
